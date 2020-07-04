@@ -14,8 +14,8 @@ public class MapleMonsterInformationProvider {
     public static class DropEntry {
         public int itemId;
         public int chance;
-        public int assignedRangeStart;
-        public int assignedRangeLength;
+        public int assignedRangeStart;  // Assigned in MapleMonster when getDrop is called
+        public int assignedRangeLength; // Assigned in MapleMonster when getDrop is called
 
         public DropEntry(int itemId, int chance) {
             this.itemId = itemId;
@@ -48,6 +48,7 @@ public class MapleMonsterInformationProvider {
         List<DropEntry> ret = new LinkedList<DropEntry>();
         try {
             Connection con = DatabaseConnection.getConnection();
+            // TODO: Make the database name modifiable in system.properties
             PreparedStatement ps = con.prepareStatement("SELECT itemid, chance, monsterid FROM monsterdrops WHERE (monsterid = ? AND chance >= 0) OR (monsterid <= 0)");
             ps.setInt(1, monsterId);
             ResultSet rs = ps.executeQuery();
@@ -59,7 +60,7 @@ public class MapleMonsterInformationProvider {
                 return null;
             }
             // Row for each item a monster could drop
-            while (rs.next()) {
+            do {
                 int rowMonsterId = rs.getInt("monsterid");
                 int chance = rs.getInt("chance");
                 // Monster ID should equal rowMonsterId? except when rowMonsterId < 0
@@ -70,7 +71,7 @@ public class MapleMonsterInformationProvider {
                     chance += theMonster.getLevel() * rowMonsterId;
                 }
                 ret.add(new DropEntry(rs.getInt("itemid"), chance));
-            }
+            } while (rs.next());
             rs.close();
             ps.close();
         } catch (Exception e) {

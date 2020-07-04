@@ -47,6 +47,8 @@ import tools.MaplePacketCreator;
 
 public class MapleMap {
     private static final int MAX_OID = 20000;
+    private static final int MESO_ITEM_ID = -1;
+    private static final int DROP_WIDTH = 25;
     private static final List<MapleMapObjectType> rangedMapobjectTypes = Arrays.asList(MapleMapObjectType.ITEM, MapleMapObjectType.MONSTER, MapleMapObjectType.DOOR, MapleMapObjectType.SUMMON, MapleMapObjectType.REACTOR);
     private Map<Integer, MapleMapObject> mapobjects = new LinkedHashMap<Integer, MapleMapObject>();
     private Collection<SpawnPoint> monsterSpawn = new LinkedList<SpawnPoint>();
@@ -224,7 +226,6 @@ public class MapleMap {
     }
 
     private void dropFromMonster(MapleCharacter dropOwner, MapleMonster monster) {
-        System.out.println("MapleMap#dropFromMonster(" + dropOwner.toString() + ", " + monster.toString() + ")"));
         if (dropsDisabled || monster.dropsDisabled()) {
             return;
         }
@@ -241,16 +242,17 @@ public class MapleMap {
             toDrop.add(monster.getDrop());
         }
         Set<Integer> alreadyDropped = new HashSet<Integer>();
-        byte htpendants = 0, htstones = 0, mesos = 0;
+        byte htpendants = 0, htstones = 0, mesos = 0; // ht short for horntail
         for (int i = 0; i < toDrop.size(); i++) {
-            if (toDrop.get(i) == -1) {
+            if (toDrop.get(i) == MESO_ITEM_ID) { // Mesos
+                // Don't drop mesos if it is a PQ map. Makes sense except now it won't drop the passes...
                 if (!this.isPQMap()) {
-                    if (alreadyDropped.contains(-1)) {
+                    if (alreadyDropped.contains(MESO_ITEM_ID)) {
                         if (!explosive) {
                             toDrop.remove(i);
                             i--;
                         } else {
-                            if (mesos < 9) {
+                            if (mesos < 9) { // Drop up to 8 stacks of mesos if explosive (boss)
                                 mesos++;
                             } else {
                                 toDrop.remove(i);
@@ -266,7 +268,7 @@ public class MapleMap {
                     toDrop.remove(i);
                     i--;
                 } else {
-                    if (toDrop.get(i) == 2041200) {
+                    if (toDrop.get(i) == 2041200) { // Dragon stone
                         if (htstones > 2) {
                             toDrop.remove(i);
                             i--;
@@ -274,7 +276,7 @@ public class MapleMap {
                         } else {
                             htstones++;
                         }
-                    } else if (toDrop.get(i) == 1122000) {
+                    } else if (toDrop.get(i) == 1122000) { // Horntail necklace
                         if (htstones > 2) {
                             toDrop.remove(i);
                             i--;
@@ -288,24 +290,27 @@ public class MapleMap {
             }
         }
         if (toDrop.size() > maxDrops) {
-            toDrop = toDrop.subList(0, maxDrops);
+            toDrop = toDrop.subList(0, maxDrops); // Truncates the list
         }
-        if (mesos < 7 && explosive) {
+        if (mesos < 7 && explosive) { // Drop at least 7 stacks of mesos if explosive
             for (int i = mesos; i < 7; i++) {
                 toDrop.add(-1);
             }
         }
+
         int shiftDirection = 0;
         int shiftCount = 0;
-        int curX = Math.min(Math.max(monster.getPosition().x - 25 * (toDrop.size() / 2), footholds.getMinDropX() + 25), footholds.getMaxDropX() - toDrop.size() * 25);
+        // Drop width = 25;
+        int curX = Math.min(Math.max(monster.getPosition().x - DROP_WIDTH * (toDrop.size() / 2), footholds.getMinDropX() + DROP_WIDTH), footholds.getMaxDropX() - toDrop.size() * DROP_WIDTH);
         int curY = Math.max(monster.getPosition().y, footholds.getY1());
         while (shiftDirection < 3 && shiftCount < 1000) {
             if (shiftDirection == 1) {
-                curX += 25;
+                curX += DROP_WIDTH;
             } else if (shiftDirection == 2) {
-                curX -= 25;
+                curX -= DROP_WIDTH;
             }
             for (int i = 0; i < toDrop.size(); i++) {
+                // Determine drop position
                 MapleFoothold wall = footholds.findWall(new Point(curX, curY), new Point(curX + toDrop.size() * 25, curY));
                 if (wall != null) {
                     if (wall.getX1() < curX) {
@@ -327,6 +332,8 @@ public class MapleMap {
                     shiftDirection = 3;
                 }
                 final Point dropPos = calcDropPos(new Point(curX + i * 25, curY), new Point(monster.getPosition()));
+
+                // 
                 final int drop = toDrop.get(i);
                 if (drop == -1) {
                     if (monster.isBoss()) {
@@ -475,7 +482,6 @@ public class MapleMap {
 
     @SuppressWarnings("static-access")
     public void killMonster(final MapleMonster monster, final MapleCharacter chr, final boolean withDrops, final boolean secondTime, int animation) {
-        System.out.println("MapleMap#killMonster(" + monster.toString() + ", " + chr.toString() + ", " + withDrops + ", " + secondTime + ", " + animation + ")");
         // Horntail first death?
         if (monster.getId() == 8810018 && !secondTime) {
             TimerManager.getInstance().schedule(new Runnable() {

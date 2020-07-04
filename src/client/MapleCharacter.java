@@ -1594,6 +1594,7 @@ public class MapleCharacter extends AbstractAnimatedMapleMapObject implements In
     }
 
     public void changeMap(final MapleMap to, final MaplePortal pto) {
+        // Pig Park, El Nath Market, Ludibrium Village
         if (to.getId() == 100000200 || to.getId() == 211000100 || to.getId() == 220000300) {
             MaplePacket warpPacket = MaplePacketCreator.getWarpToMap(to, pto.getId() - 2, this);
             changeMapInternal(to, pto.getPosition(), warpPacket);
